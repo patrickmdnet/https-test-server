@@ -1,0 +1,28 @@
+# openssl req -new -nodes -newkey rsa:2048 -keyout server-key.pem -out server-csr.pem -config cert.cnf
+# openssl x509 -req -days 365 -in server-csr.pem -signkey server-key.pem -out server-cert.pem -extensions v3_req -extfile cert.cnf
+# openssl x509 -in server-cert.pem -text -noout
+
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = v3_req
+
+[dn]
+C = Country 
+ST = State
+L = Locality 
+O = Company
+OU = Unit
+CN = site.common.name.com
+
+[v3_req]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.2 = site.alt.name.biz
+DNS.3 = site.alt.name.io
+DNS.4 = site.alt.name.net
