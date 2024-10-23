@@ -1,5 +1,6 @@
 import http.server
 import ssl
+import socket
 import urllib.parse
 import sys
 from datetime import datetime
@@ -11,12 +12,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         Processes requests to server. Generates and sends the response.
         """
         # Construct a string representation of the request
+        print(f"in handle_request: {self}")
         request_line = f"{self.requestline}\r\n"
         headers = ''.join(f"{k}: {v}\r\n" for k, v in self.headers.items())
         full_request = request_line + headers
 
         # Send the full request back as the response
-	## TODO: Extend usability with HTML templates. 
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
@@ -62,10 +63,33 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 # If a port is provided as a command-line argument, use it. Otherwise, default to 4443.
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 4443
 
-httpd = http.server.HTTPServer(('localhost', port), CustomHandler)
-httpd.socket = ssl.wrap_socket(httpd.socket, 
-                               keyfile="server-key.pem", 
-                               certfile="server-cert.pem", server_side=True)
+hostname = socket.gethostname()
+hostname = f"{hostname}.mskcc.org"
+httpd = http.server.HTTPServer((hostname, port), CustomHandler)
+context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+context.verify_mode = ssl.CERT_NONE
+context.check_hostname = False
+context.load_cert_chain(keyfile="server-key.pem", certfile="server-cert.pem")
+httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
 
-print(f"Server started at https://localhost:{port}")
-httpd.serve_forever()
+print(f"Server started at https://{hostname}:{port}")
+while True:
+    try:
+        httpd.handle_request()
+    except Exception as e:
+        pass
+        #print(f"An exception occurred: {e}")
+        
+# with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
+    # with context.wrap_socket(sock, server_side=True) as ssock:
+        # ssock.bind(('127.0.0.1', 8443))
+        # ssock.listen(0)
+
+        # while True:
+            # conn, addr = ssock.accept()
+            # print(f"conn = {conn}; addr = {addr}")
+            # while True:
+                # data = conn.recv(1024)
+                # if not data:
+                    # break
+                # print(f"Received: {data.decode('utf-8')}")        
